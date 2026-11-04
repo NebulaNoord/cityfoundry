@@ -98,6 +98,50 @@ Projection: tile `(x, y)` has its top vertex at `sx = (x−y)·32`, `sy = (x+y)�
 | Speed | `0` or `P` pause, `1`, `2`, `3` |
 | Save | Save button (top right) |
 
+### Touch (phones and tablets)
+
+Touch input goes through `src/ui/input/gestures.js` (pure, unit-tested), and
+only for `pointerType === 'touch'`. Mouse and pen keep the desktop paths
+above unchanged.
+
+| Gesture | Effect |
+|---|---|
+| Tap | Same as a left click with the current tool: inspect a tile, build one road tile, zone, dezone or bulldoze one tile |
+| One-finger drag in Inspect | Pan |
+| One-finger drag in Road / Zone / Dezone / Bulldoze | Same as a left drag: road ghost with cost, or a rectangle. The command is sent only when the finger lifts |
+| Two fingers (any tool) | Pan with the midpoint, pinch to zoom around the midpoint |
+| Second finger during a build drag | Cancels the drag. Nothing is sent, and the remaining finger only pans until every finger is up |
+| Cancel button (shown during a build drag) | Same as Esc. Tap it with another finger, or slide the dragging finger onto it and lift |
+
+- A finger must move more than 10 px (`TAP_SLOP`) before a touch counts as a
+  drag, so a slightly shaky tap is still a tap.
+- `pointercancel` never commits anything.
+- Touch has no hover, so the tool ghost and hint appear only while a finger is
+  down. The hint floats above the finger instead of beside the cursor.
+
+### Compact layout (phones, small tablets)
+
+CSS media queries only: `max-width: 900px` or `max-height: 520px`, with
+`hover: none` / `pointer: coarse` for touch details. At 1280×720 desktop
+matches none of them, so the desktop layout is unchanged.
+
+- **Top bar.** City name, date, speed, funds and population stay visible.
+  Daily net and jobs move into the City sheet. Portrait uses two rows,
+  landscape one.
+- **City button.** Opens the demand / tax sheet; its close button or the
+  City button closes it. The sheet sits above the toolbar (portrait) or on
+  the right (landscape) and is hidden by default.
+- **Toolbar.** Docked at the bottom with targets of 44 px or more. It
+  scrolls sideways if it doesn't fit. Short labels replace the long ones,
+  and hotkey hints are hidden on touch.
+- **Inspector.** Opens on tap, closes with its 44 px close button.
+- **Notices.** Only the newest is shown, under the top bar.
+- **Safe areas.** `env(safe-area-inset-*)` padding everywhere, and the
+  viewport uses `viewport-fit=cover`.
+- **Browser gestures.** The game sets `touch-action: none` (no page scroll,
+  pinch or pull-to-refresh); the rest of the page uses
+  `touch-action: manipulation` (no double-tap zoom).
+
 Tool previews:
 
 - **Road.** The ghost path, cost and validity come from `sim.previewRoad`.
