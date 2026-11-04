@@ -8,19 +8,13 @@ import { useGame } from '../store.js';
 import { TOOLS, toolForKey, isZoneTool, zoneForTool, normRect, cellsInRect, zoneBlockReason, errorText } from '../tools.js';
 import { formatMoney } from '../format.js';
 import { saveCity, AUTOSAVE_SLOT } from '../../sim/storage.js';
+import { slotForWorld } from '../slots.js';
+
+export { slotForWorld };
 
 const KEY_PAN_SPEED = 900; // screen px per second
 const ZOOM_STEP = 1.2;
 const MAX_RECT_CELLS = 4096;
-
-export function slotForWorld(world) {
-  const slug = String(world.name || 'city')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 40);
-  return `city-${slug || 'city'}-${world.seed}`;
-}
 
 export class GameController {
   constructor(sim) {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { toolForKey, normRect, cellsInRect, zoneBlockReason, zoneForTool, isZoneTool, errorText } from '../../src/ui/tools.js';
 import { pushNotification, useGame, MAX_NOTIFICATIONS } from '../../src/ui/store.js';
 import { formatMoney, formatSignedMoney, formatDate } from '../../src/ui/format.js';
+import { slotForWorld } from '../../src/ui/slots.js';
 
 describe('tools', () => {
   it('maps hotkeys', () => {
@@ -80,5 +81,14 @@ describe('format', () => {
     expect(formatMoney(-1234.6)).toBe('−$1,235');
     expect(formatSignedMoney(12)).toBe('+$12');
     expect(formatDate({ day: 1, month: 1, year: 1 })).toBe('1 Jan, Year 1');
+  });
+});
+
+describe('save slots', () => {
+  it('derives a stable, safe slot per city and never the autosave slot', () => {
+    expect(slotForWorld({ name: 'Foundry Flats', seed: 42 })).toBe('city-foundry-flats-42');
+    expect(slotForWorld({ name: '  ***  ', seed: 'abc' })).toBe('city-city-abc');
+    expect(slotForWorld({ name: 'autosave', seed: 1 })).not.toBe('autosave');
+    expect(slotForWorld({ name: 'x'.repeat(200), seed: 1 }).length).toBeLessThanOrEqual(100);
   });
 });
