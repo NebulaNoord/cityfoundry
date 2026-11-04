@@ -1,4 +1,4 @@
-# CityFoundry Simulation API — v0.1 (Phase 1 contract)
+# CityFoundry Simulation API — v0.1.1 (Phase 1 contract)
 
 Owner: **Big Dawg** (simulation). Consumer: **Picasso** (frontend).
 This file is the contract. Neither side changes a signature, event name or
@@ -10,7 +10,7 @@ React, PixiJS or browser globals** (the one exception is `src/sim/storage.js`,
 which wraps IndexedDB and is never imported by the core). It must run under
 Node for tests and headless runs.
 
-Entry point: `import { createSimulation, loadSimulation, SAVE_VERSION } from './sim/index.js'`
+Entry point: `import { createSimulation, loadSimulation, SAVE_VERSION, SaveError, CHUNK_SIZE } from './sim/index.js'`
 
 ---
 
@@ -40,7 +40,7 @@ Entry point: `import { createSimulation, loadSimulation, SAVE_VERSION } from './
 
 ```js
 const sim = createSimulation({ width = 128, height = 128, seed = Date.now(), name = 'New City' })
-const sim2 = loadSimulation(saveData)   // saveData from sim.serialize(); throws SaveError on bad/foreign data
+const sim2 = loadSimulation(saveData)   // saveData from sim.serialize() (object or its JSON string); throws SaveError on bad/foreign data
 ```
 A new world is generated from `seed` (deterministic): grass with a few lakes,
 and an **outside connection** — a short `highway` stub entering from the
@@ -58,19 +58,19 @@ Commands are atomic: on `ok:false` nothing changed and no money was spent.
 
 | Command | Behaviour |
 |---|---|
-| `previewRoad(from, to, type='street')` | Returns `{ path:[{x,y}], cost, valid, error? }` — does **not** mutate. Path is a straight line if `from`/`to` share a row/column, otherwise an L (horizontal first). Tiles that already have the same road are free. |
+| `previewRoad(from, to, type='street')` | Returns `{ path:[{x,y}], cost, valid, error?, message? }` — does **not** mutate. `error`/`message` use the same codes as `placeRoad`. Path is a straight line if `from`/`to` share a row/column, otherwise an L (horizontal first). Tiles that already have the same road are free. |
 | `placeRoad(from, to, type='street')` | Builds the preview path. Road on a zoned tile clears the zone; road on a building tile is `BLOCKED`. |
 | `bulldoze(cells)` | `cells: [{x,y}]`. Removes building, else road, else zone, per tile. Refunds nothing. Highway stub is `PROTECTED` (skipped, not an error, if mixed with other cells). |
-| `paintZone(cells, zone)` | `zone: 'R'|'C'|'I'|null` (`null` = dezone). Skips water/road tiles and tiles without `roadAccess`; returns `changed` with only the tiles that actually changed. Zoning is free. Dezoning a tile with a building marks the building for abandonment. |
-| `setSpeed(n)` | `0` pause, `1`, `2`, `3`. |
-| `setTaxRate(zone, pct)` | `zone: 'R'|'C'|'I'`, `pct` integer 0–29. Default 9. Affects demand and income. |
+| `paintZone(cells, zone)` | `zone: 'R'|'C'|'I'|null` (`null` = dezone). Skips water/road tiles and tiles without `roadAccess`; returns `changed` with only the tiles that actually changed. If nothing could be zoned and at least one cell was skipped for lack of road access, returns `NO_ROAD_ACCESS` instead. Dezoning ignores road access. Zoning is free. Dezoning a tile with a building marks the building for abandonment. |
+| `setSpeed(n)` | `0` pause, `1`, `2`, `3`. Anything else → `INVALID`. |
+| `setTaxRate(zone, pct)` | `zone: 'R'|'C'|'I'`, `pct` integer 0–29. Default 9. Affects demand (immediately) and income (from the next day). Emits `statsChanged` when the rate changes. Invalid input → `INVALID`. |
 
 Costs (Phase 1): street **$10/tile**, avenue **$25/tile**. Upkeep street $0.5/tile/day, avenue $1.2/tile/day. Starting funds **$50,000**.
 
 ## 4. Time
 
 - 1 tick = 1 in-game hour. 24 ticks = 1 day, 30 days = 1 month, 12 months = 1 year. Start: Year 1, Month 1, Day 1.
-- `sim.update(dtMs)` — real-time driver called by the frontend every frame. Ticks per real second: speed 1 → 12, speed 2 → 24, speed 3 → 48. Backlog is capped at one real second of ticks; anything beyond that is dropped (no spiral of death after a tab sleeps).
+- `sim.update(dtMs)` — real-time driver called by the frontend every frame; returns the number of ticks it ran. Ticks per real second: speed 1 → 12, speed 2 → 24, speed 3 → 48. Backlog is capped at one real second of ticks; anything beyond that is dropped (no spiral of death after a tab sleeps).
 - `sim.step(n = 1)` — advance exactly `n` ticks regardless of speed/pause (tests, debugging).
 - Daily systems (demand, growth, move-ins, finances) run on the tick where `hour === 0`.
 
@@ -83,7 +83,7 @@ Costs (Phase 1): street **$10/tile**, avenue **$25/tile**. Upkeep street $0.5/ti
 | `getWorld()` | `{ width, height, chunkSize, name, seed, outsideConnection: {x,y} }` |
 | `getTile(x, y)` | Tile shape above, or `null` out of bounds |
 | `getTilesInRect(x0, y0, x1, y1)` | Array of tiles, inclusive, clamped to the map (for rendering the visible area) |
-| `getChunkVersion(cx, cy)` | Integer that increases whenever anything in that chunk changes (render caching) |
+| `getChunkVersion(cx, cy)` | Integer that increases whenever anything in that chunk changes (render caching); `null` for a chunk outside the map |
 | `getBuilding(id)` | Building shape below, or `null` |
 | `getBuildings()` | Array of all buildings |
 | `getStats()` | Stats shape below |
@@ -141,7 +141,7 @@ Handlers run synchronously; a throwing handler is caught and logged and does not
 ## 7. Persistence
 
 - `sim.serialize()` → JSON-safe object `{ version: SAVE_VERSION, ... }`. Round trip `loadSimulation(sim.serialize())` must reproduce identical `getStats()`, tiles and buildings, and identical future behaviour (RNG state is saved).
-- `src/sim/storage.js` (browser only): `saveCity(slot, sim)`, `loadCity(slot) → sim`, `listSaves() → [{ slot, name, savedAt, population, funds }]`, `deleteSave(slot)`. Slot `'autosave'` is reserved.
+- `src/sim/storage.js` (browser only): `saveCity(slot, sim)`, `loadCity(slot) → sim`, `listSaves() → [{ slot, name, savedAt, population, funds }]`, `deleteSave(slot)`. All return Promises. Slot `'autosave'` is reserved (exported as `AUTOSAVE_SLOT`). `listSaves` is newest first; `loadCity` rejects with `SaveError` for a missing or corrupt slot. Each function takes an optional last argument `{ factory }` (an `IDBFactory`, for tests).
 
 ## 8. Growth model (Phase 1 + zoning growth)
 
@@ -153,3 +153,13 @@ Runs daily. Must be real mechanics, not decoration:
 - **Abandonment**: a building loses its road connection or zoning → `abandoned` after 5 days; abandoned buildings empty out.
 - **Land value**: base 30, + near roads, + near commercial, − near industrial (within 4 tiles). Recomputed for dirty areas.
 - **Finances (daily)**: income = Σ R households × R tax factor + Σ C/I filled jobs × tax factor; expenses = road upkeep. Funds may go negative; a warning notification fires below $5,000.
+
+## 9. Phase 1 behaviour notes (clarifications, no shape changes)
+
+- **Error order** for roads: `INVALID` (bad cells/type; `highway` is not buildable) → `OUT_OF_BOUNDS` → `WATER` → `BLOCKED` → `INSUFFICIENT_FUNDS`. Placing a different road type over an existing road replaces it at the new type's full price.
+- **bulldoze** returns `OUT_OF_BOUNDS` only if every cell is outside the map, `PROTECTED` only if every in-map cell with something on it is highway; otherwise `ok:true` with the tiles that changed. It emits `statsChanged` when a road or building was removed.
+- **Stats**: `population = households × 3`. Labour force = `floor(households × 1.5)`; `workers` = filled jobs; `unemployed = max(0, labourForce − workers)`. `jobs`/`jobCapacity` count active buildings only. `buildings` counts every structure, including constructing and abandoned ones. `daily` is all zeros until the first day completes.
+- **Abandoned buildings** stay (empty) until bulldozed and block new growth on their tiles; reconnecting or rezoning does not revive them. A building recovers if its problem is fixed before the 5th day.
+- **Money** is exact to the cent: `funds`, `daily.*` are dollars with at most 2 decimals.
+- **Notifications** in Phase 1: low funds (`warn`, on crossing below $5,000), debt (`alert`, on crossing below $0), buildings abandoned (`warn`), zoned land with no connection (`warn`, at most monthly), high unemployment (`warn`, more than 25% of a labour force of 30 or more, at most monthly). The sim keeps the newest 200.
+- **Event order within a tick**: `tick`, then `tilesChanged`, `buildingAdded`, `buildingChanged`, `buildingRemoved`, `notification` for everything that tick changed, then (on day ticks) `day` and `statsChanged`. Command events are emitted before the command returns.
