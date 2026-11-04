@@ -234,8 +234,12 @@ class Simulation {
     let roadsRemoved = false;
     let buildingsRemoved = false;
     const changed = [];
-    for (const idx of targets) {
-      const bid = s.buildingAt[idx];
+    // Decide each tile's action before mutating, so removing a multi-tile
+    // building doesn't make its other footprint tiles fall through to dezoning.
+    const plannedBuilding = targets.map((idx) => s.buildingAt[idx]);
+    for (let k = 0; k < targets.length; k++) {
+      const idx = targets[k];
+      const bid = plannedBuilding[k];
       if (bid !== 0) {
         const b = s.buildings.get(bid);
         if (!b) continue; // already removed via another footprint tile
