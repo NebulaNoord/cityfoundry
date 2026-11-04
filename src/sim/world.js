@@ -102,7 +102,9 @@ export function generateTerrain(s) {
   const rng = Rng.fromSeed(s.seed, 'terrain');
   const { width, height } = s;
   const midY = s.outside.y;
-  const protectedTile = (x, y) => x <= HIGHWAY_LENGTH + ZONE_DEPTH && Math.abs(y - midY) <= ZONE_DEPTH + 1;
+  // Keep a lake-free entrance around the highway stub so the player can always
+  // build out from it (and zone both sides of the first street).
+  const protectedTile = (x, y) => x <= HIGHWAY_LENGTH + 3 * ZONE_DEPTH && Math.abs(y - midY) <= 2 * ZONE_DEPTH;
 
   const area = width * height;
   const lakes = Math.max(1, Math.round((2 + rng.int(3)) * (area / (128 * 128))));
