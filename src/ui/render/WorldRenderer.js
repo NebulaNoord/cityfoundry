@@ -79,13 +79,15 @@ export class WorldRenderer {
 
   static async create(canvasParent, sim) {
     const app = new Application();
+    const software = isSoftwareGL();
     await app.init({
       resizeTo: canvasParent,
       background: WORLD.bg,
-      antialias: true,
+      // MSAA is cheap on a GPU but halves the frame rate on software rasterisers.
+      antialias: !software,
       autoStart: false, // the game loop calls render() itself
       autoDensity: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      resolution: software ? 1 : Math.min(window.devicePixelRatio || 1, 2),
       preference: 'webgl',
       powerPreference: 'high-performance',
     });
@@ -119,6 +121,7 @@ export class WorldRenderer {
     if (this.showAccess === on) return;
     this.showAccess = on;
     this.access.visible = on;
+    this.forceRender = true;
   }
 
   // ------------------------------------------------------------ chunk cache
@@ -158,6 +161,7 @@ export class WorldRenderer {
     const t0 = performance.now();
     let visible = 0;
     let rebuilt = 0;
+    let visibilityChanged = false;
     const stale = [];
     for (const c of this.chunks) {
       let on = c.cx >= cx0 && c.cx <= cx1 && c.cy >= cy0 && c.cy <= cy1;
@@ -167,6 +171,7 @@ export class WorldRenderer {
         on = b.maxX >= view.minX && b.minX <= view.maxX && b.maxY >= view.minY - 64 && b.minY <= view.maxY + 64;
       }
       if (on !== c.visible) {
+        visibilityChanged = true;
         c.visible = on;
         c.ground.visible = c.shadow.visible = c.obj.visible = c.access.visible = on;
       }
@@ -193,6 +198,7 @@ export class WorldRenderer {
     this.stats.visibleChunks = visible;
     this.stats.rebuilt += rebuilt;
     this.stats.pending = stale.length - rebuilt;
+    return rebuilt > 0 || visibilityChanged;
   }
 
   /** Invalidate every chunk (e.g. after WebGL context restore). */
@@ -202,6 +208,7 @@ export class WorldRenderer {
       c.accessVersion = -1;
     }
     this.overlayDirty = true;
+    this.forceRender = true;
   }
 
   // ---------------------------------------------------------------- overlay
@@ -218,12 +225,11 @@ export class WorldRenderer {
     this.overlayDirty = true;
   }
 
-  drawOverlay(time) {
+  drawOverlay() {
     const s = this.overlayState;
     const g = this.overlayG;
     g.clear();
     if (!s) return;
-    const pulse = 0.55 + 0.25 * Math.sin(time / 260);
 
     if (s.road && s.road.path.length) {
       const col = s.road.valid ? WORLD.ghostOk : WORLD.ghostBad;
@@ -270,25 +276,40 @@ export class WorldRenderer {
     if (s.hover && !s.road && !s.rect) {
       const col = s.tool === 'bulldoze' ? WORLD.ghostBad : WORLD.hover;
       const d = tileDiamond(s.hover.x, s.hover.y);
-      g.poly(d, true).fill({ color: col, alpha: 0.18 * pulse + 0.06 });
+      g.poly(d, true).fill({ color: col, alpha: 0.2 });
       g.poly(d, true).stroke({ width: 1.5, color: col, alpha: 0.95 });
     }
   }
 
   // ------------------------------------------------------------------ frame
-  render(cam, time) {
+  /**
+   * Draw a frame. Returns false (and skips the GPU work) when nothing visible
+   * changed: same camera, no chunk rebuilt or shown/hidden, overlay clean.
+   */
+  render(cam) {
     const t0 = performance.now();
     const vw = this.viewW, vh = this.viewH;
+    const px = Math.round(vw / 2 - cam.x * cam.zoom), py = Math.round(vh / 2 - cam.y * cam.zoom);
+    const camKey = `${px},${py},${cam.zoom},${vw},${vh}`;
+    let dirty = camKey !== this.lastCamKey || this.forceRender;
+    this.lastCamKey = camKey;
+    this.forceRender = false;
     this.world.scale.set(cam.zoom);
-    this.world.position.set(Math.round(vw / 2 - cam.x * cam.zoom), Math.round(vh / 2 - cam.y * cam.zoom));
-    this.updateChunks(cam);
-    // overlay is cheap; redraw every frame when something animates (hover pulse)
-    if (this.overlayDirty || (this.overlayState && this.overlayState.hover)) {
-      this.drawOverlay(time);
+    this.world.position.set(px, py);
+    if (this.updateChunks(cam)) dirty = true;
+    if (this.overlayDirty) {
+      this.drawOverlay();
       this.overlayDirty = false;
+      dirty = true;
+    }
+    if (!dirty) {
+      this.stats.skipped = (this.stats.skipped || 0) + 1;
+      return false;
     }
     this.app.render();
+    this.stats.frames = (this.stats.frames || 0) + 1;
     this.stats.frameMs = performance.now() - t0;
+    return true;
   }
 
   destroy() {
@@ -297,6 +318,21 @@ export class WorldRenderer {
     } catch {
       /* already gone */
     }
+  }
+}
+
+/** True when WebGL is backed by a CPU rasteriser (SwiftShader, llvmpipe…). */
+export function isSoftwareGL() {
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    if (!gl) return true;
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return /swiftshader|llvmpipe|software|softpipe/i.test(name);
+  } catch {
+    return false;
   }
 }
 

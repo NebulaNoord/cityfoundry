@@ -19,23 +19,38 @@ export function makeTileGrid(tiles, x0, y0, x1, y1) {
 
 // ------------------------------------------------------------------ terrain
 export function drawTerrain(g, at, x0, y0, x1, y1) {
-  // one base slab of grass for the whole chunk, then per-tile variation
-  g.poly(rectPoly(x0, y0, x1 + 1, y1 + 1), true).fill(WORLD.grass[0]);
+  // Each grass tile is painted exactly once (no base slab underneath), and
+  // horizontal runs of the same shade are merged into one quad: this keeps
+  // overdraw and vertex count low, which matters on software rasterisers.
+  for (let y = y0; y <= y1; y++) {
+    let runStart = -1;
+    let runColor = -1;
+    const flush = (xEnd) => {
+      if (runStart >= 0) g.poly(rectPoly(runStart, y, xEnd, y + 1), true).fill(runColor);
+      runStart = -1;
+    };
+    for (let x = x0; x <= x1; x++) {
+      const t = at(x, y);
+      if (!t || t.terrain === 'water') {
+        flush(x);
+        if (t) drawWater(g, at, x, y);
+        continue;
+      }
+      const c = hash2(x, y, 1) > 0.45 ? WORLD.grass[1 + Math.floor(hash2(x, y, 2) * (WORLD.grass.length - 1))] : WORLD.grass[0];
+      if (c !== runColor || runStart < 0) {
+        flush(x);
+        runStart = x;
+        runColor = c;
+      }
+    }
+    flush(x1 + 1);
+  }
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       const t = at(x, y);
-      if (!t) continue;
-      if (t.terrain === 'water') {
-        drawWater(g, at, x, y);
-        continue;
-      }
-      const r = hash2(x, y, 1);
-      if (r > 0.45) {
-        const c = WORLD.grass[1 + Math.floor(hash2(x, y, 2) * (WORLD.grass.length - 1))];
-        g.poly(rectPoly(x, y, x + 1, y + 1), true).fill(c);
-      }
+      if (!t || t.terrain === 'water' || t.road || t.buildingId != null) continue;
       if (hash2(x, y, 5) > 0.72) {
-        // tufts / mown stripes: little strokes that read as texture at zoom
+        // tufts: small strokes that read as texture when zoomed in
         const u = x + 0.2 + hash2(x, y, 6) * 0.6;
         const v = y + 0.2 + hash2(x, y, 7) * 0.6;
         g.poly([...P(u - 0.08, v), ...P(u, v - 0.05), ...P(u + 0.08, v), ...P(u, v + 0.05)], true)

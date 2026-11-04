@@ -106,6 +106,11 @@ test('found, build, grow, bulldoze, save and reload a city', async ({ page }) =>
   // ---- road tool with ghost preview, then build by drag
   await page.keyboard.press('r');
   await expect(page.getByTestId('tool-road')).toHaveAttribute('aria-pressed', 'true');
+  // pressing R again toggles street ↔ avenue
+  await page.keyboard.press('r');
+  await expect(page.getByTestId('road-avenue')).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('road-street').click();
+  await expect(page.getByTestId('road-street')).toHaveAttribute('aria-checked', 'true');
   const endX = hx + 18;
   {
     const p = await tileXY(page, hx + 1, oy);
@@ -174,6 +179,12 @@ test('found, build, grow, bulldoze, save and reload a city', async ({ page }) =>
     .poll(() => page.evaluate(([x, y]) => window.__cityfoundry.sim.getTile(x, y).road, [endX, oy]))
     .toBe(null);
 
+  // ---- Space toggles pause (after clicking a HUD button, focus returns to the map)
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('speed-0')).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('speed-3')).toHaveAttribute('aria-checked', 'true');
+
   // ---- pause, save, remember HUD figures
   await page.keyboard.press('0');
   await expect(page.getByTestId('speed-0')).toHaveAttribute('aria-checked', 'true');
@@ -194,6 +205,13 @@ test('found, build, grow, bulldoze, save and reload a city', async ({ page }) =>
   await expect(page.getByTestId('date')).toHaveText(date);
   // bulldozed tile is still gone after the round trip
   expect(await page.evaluate(([x, y]) => window.__cityfoundry.sim.getTile(x, y).road, [endX, oy])).toBe(null);
+
+  // ---- Main menu button autosaves; Continue brings the city back
+  await page.getByRole('button', { name: 'Main menu' }).click();
+  await expect(page.getByTestId('continue')).toContainText('Testburg');
+  await page.getByTestId('continue').click();
+  await expect(page.getByTestId('population')).toHaveText(pop);
+  await expect(page.getByTestId('funds')).toHaveText(funds);
 
   expect(errors, `console errors:\n${errors.join('\n')}`).toEqual([]);
 });

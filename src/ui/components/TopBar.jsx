@@ -32,7 +32,7 @@ export function TopBar({ ctl, onQuit }) {
   return (
     <header className="topbar plate" data-testid="topbar">
       <div className="tb-city">
-        <button className="btn-icon" onClick={onQuit} title="Save and return to the main menu" aria-label="Save and return to the main menu">
+        <button className="btn-icon" onClick={onQuit} title="Main menu (progress is autosaved)" aria-label="Main menu">
           <Icon name="menu" size={18} />
         </button>
         <div>

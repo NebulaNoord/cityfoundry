@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameController } from '../game/GameController.js';
 import { useGame } from '../store.js';
+import { AUTOSAVE_SLOT } from '../../sim/storage.js';
 import { tileCenter } from '../render/iso.js';
 import { worldToScreen } from '../render/camera.js';
 import { TopBar } from './TopBar.jsx';
@@ -38,7 +39,8 @@ export function GameScreen({ sim, onQuit }) {
   }, [sim]);
 
   const quit = async () => {
-    if (ctl) await ctl.save(undefined, { quiet: true }).catch(() => null);
+    // Leaving writes the autosave slot, which the menu offers as "Continue".
+    if (ctl) await ctl.save(AUTOSAVE_SLOT, { quiet: true }).catch(() => null);
     onQuit();
   };
 

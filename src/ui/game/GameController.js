@@ -79,7 +79,7 @@ export class GameController {
     try {
       this.sim.update(dt);
       this.applyKeyPan(dt);
-      if (!this.glLost) this.renderer.render(this.cam, now);
+      if (!this.glLost) this.renderer.render(this.cam);
     } catch (err) {
       console.error('[cityfoundry] frame failed', err);
     }
@@ -245,6 +245,13 @@ export class GameController {
     on(cv, 'wheel', this.onWheel, { passive: false });
     on(cv, 'contextmenu', (e) => e.preventDefault());
     on(cv, 'auxclick', (e) => e.preventDefault());
+    // A mouse click on a HUD button or slider must not keep keyboard focus there,
+    // or Space would re-press the button and hotkeys would go to the slider.
+    // Keyboard users (Tab) keep normal focus behaviour.
+    on(window, 'pointerup', (e) => {
+      const el = e.target && e.target.closest && e.target.closest('button, input[type=range]');
+      if (el && e.pointerType !== '') setTimeout(() => el.blur(), 0);
+    });
     on(window, 'keydown', this.onKeyDown);
     on(window, 'keyup', this.onKeyUp);
     on(window, 'blur', () => {
