@@ -1,0 +1,63 @@
+/* CityFoundry design tokens.
+   Identity: a works-department control desk at night. Blued steel panels,
+   poured-concrete text, survey-blue linework, sodium-lamp orange for the one
+   thing that matters right now. Type: Barlow (highway-signage grotesk) with
+   its condensed cut for figures and headings. */
+:root {
+  /* steel */
+  --steel-950: #161b1f;
+  --steel-900: #1d2328;
+  --steel-850: #232a30;
+  --steel-800: #2a3239;
+  --steel-700: #36404a;
+  --steel-600: #4a5661;
+  --steel-500: #65727e;
+  /* concrete (text) */
+  --concrete-100: #ebe7dd;
+  --concrete-300: #c9c4b8;
+  --concrete-500: #9b9f9e;
+  --concrete-600: #7d8487;
+  /* survey linework */
+  --survey: #7fb2d6;
+  --survey-dim: rgba(127, 178, 214, 0.22);
+  --survey-faint: rgba(127, 178, 214, 0.09);
+  /* sodium accent */
+  --sodium: #ff9f43;
+  --sodium-strong: #ffb366;
+  --sodium-dim: rgba(255, 159, 67, 0.16);
+  /* signals */
+  --ok: #8fcf7a;
+  --bad: #ff6a55;
+  --warn: #f2c14e;
+  /* zones (keep in sync with src/ui/render/palette.js) */
+  --zone-r: #6db35c;
+  --zone-c: #4b93cf;
+  --zone-i: #d6a42b;
+
+  --font-body: 'Barlow', system-ui, sans-serif;
+  --font-cond: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+
+  /* type scale: 12 / 13 / 15 / 18 / 24 / 36 / 64 */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: 2.25rem;
+  --fs-hero: 4rem;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* panels are machined plates: square-ish corners, a top highlight, a hard drop */
+  --radius-plate: 3px;
+  --radius-control: 2px;
+  --plate-bg: linear-gradient(180deg, var(--steel-850), var(--steel-900));
+  --plate-border: 1px solid var(--steel-700);
+  --plate-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --focus: 0 0 0 2px var(--steel-950), 0 0 0 4px var(--sodium);
+}
