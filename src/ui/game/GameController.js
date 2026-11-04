@@ -9,6 +9,7 @@ import { TOOLS, toolForKey, isZoneTool, zoneForTool, normRect, cellsInRect, zone
 import { formatMoney } from '../format.js';
 import { saveCity, AUTOSAVE_SLOT } from '../../sim/storage.js';
 import { slotForWorld } from '../slots.js';
+import { TouchGestures, applyPinch } from '../input/gestures.js';
 
 export { slotForWorld };
 
@@ -34,6 +35,7 @@ export class GameController {
     this.lastHoverKey = '';
     this.glLost = false;
     this.saving = null;
+    this.touch = new TouchGestures();
   }
 
   // ------------------------------------------------------------- lifecycle
@@ -46,8 +48,10 @@ export class GameController {
     }
     this.canvas = this.renderer.app.canvas;
     const o = this.world.outsideConnection;
-    const c = tileCenter(o.x + 12, o.y);
-    this.cam = clampCamera({ x: c.x, y: c.y, zoom: 1.25 }, this.renderer.bounds);
+    // Phones get a slightly wider view that starts at the highway's end.
+    const small = Math.min(this.renderer.viewW, this.renderer.viewH) < 600;
+    const c = tileCenter(o.x + (small ? 8 : 12), o.y);
+    this.cam = clampCamera({ x: c.x, y: c.y, zoom: small ? 0.9 : 1.25 }, this.renderer.bounds);
     this.bindSim();
     this.bindInput();
     this.publishAll();
@@ -235,6 +239,7 @@ export class GameController {
     on(cv, 'pointerdown', this.onPointerDown);
     on(window, 'pointermove', this.onPointerMove);
     on(window, 'pointerup', this.onPointerUp);
+    on(window, 'pointercancel', (e) => e.pointerType === 'touch' && this.onTouchUp(e, true));
     on(cv, 'pointerleave', this.onPointerLeave);
     on(cv, 'wheel', this.onWheel, { passive: false });
     on(cv, 'contextmenu', (e) => e.preventDefault());
@@ -270,6 +275,7 @@ export class GameController {
   }
 
   onPointerDown = (e) => {
+    if (e.pointerType === 'touch') return this.onTouchDown(e);
     const p = this.localPos(e);
     this.pointer = p;
     this.canvas.focus?.();
@@ -300,6 +306,7 @@ export class GameController {
 
   onPointerMove = (e) => {
     if (!this.canvas) return;
+    if (e.pointerType === 'touch') return this.onTouchMove(e);
     const p = this.localPos(e);
     const inside = e.target === this.canvas || (this.drag != null);
     if (this.drag && this.drag.kind === 'pan') {
@@ -314,6 +321,7 @@ export class GameController {
   };
 
   onPointerUp = (e) => {
+    if (e.pointerType === 'touch') return this.onTouchUp(e, false);
     if (!this.drag) return;
     const d = this.drag;
     this.drag = null;
@@ -326,7 +334,8 @@ export class GameController {
     this.updateToolPreview(true);
   };
 
-  onPointerLeave = () => {
+  onPointerLeave = (e) => {
+    if (e && e.pointerType === 'touch') return;
     if (this.drag) return;
     this.pointer = null;
     this.lastHoverKey = '';
@@ -396,9 +405,121 @@ export class GameController {
     }
   };
 
+  // ------------------------------------------------------------- touch
+  // Touch never hovers: the tool ghost appears only while a finger is down.
+  // Tap = left click; one-finger drag = left drag (pans in Inspect); two
+  // fingers pan + pinch-zoom in every tool. Builds commit only on lift.
+  onTouchDown(e) {
+    e.preventDefault();
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    try {
+      this.canvas.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* capture is best-effort */
+    }
+    const p = this.localPos(e);
+    this.runTouch(this.touch.down(e.pointerId, p.x, p.y));
+  }
+
+  onTouchMove(e) {
+    if (!this.touch.active) return;
+    const p = this.localPos(e);
+    this.runTouch(this.touch.move(e.pointerId, p.x, p.y));
+  }
+
+  onTouchUp(e, cancelled) {
+    if (!this.touch.active) return;
+    const p = this.localPos(e);
+    // Sliding the finger onto the on-screen Cancel button and lifting there cancels.
+    const under = typeof document.elementFromPoint === 'function' ? document.elementFromPoint(e.clientX, e.clientY) : null;
+    if (!cancelled && this.drag && under && under.closest && under.closest('[data-cancel-drag]')) cancelled = true;
+    this.runTouch(cancelled ? this.touch.cancel(e.pointerId) : this.touch.up(e.pointerId, p.x, p.y));
+    if (!this.touch.active) {
+      // no finger left: drop the hover ghost (there is no cursor on touch)
+      this.pointer = null;
+      this.lastHoverKey = '';
+      useGame.setState({ hover: null, hint: null });
+      this.pushOverlay();
+    }
+  }
+
+  runTouch(actions) {
+    for (const a of actions) this.touchAction(a);
+  }
+
+  touchAction(a) {
+    const tool = useGame.getState().tool;
+    switch (a.type) {
+      case 'tap': {
+        const t = this.tileAt(a.x, a.y);
+        if (tool === 'inspect') {
+          useGame.setState({ selected: t });
+          this.refreshInspect();
+          this.pushOverlay();
+        } else if (t) {
+          // a tap is a zero-length drag: one road tile, one zone/bulldoze tile
+          this.commitTool({ kind: 'tool', tool, start: t, end: t });
+        }
+        return;
+      }
+      case 'dragStart': {
+        if (tool === 'inspect') {
+          this.drag = { kind: 'touchpan' };
+          this.panBy(a.dx, a.dy);
+          return;
+        }
+        const t = this.tileAt(a.start.x, a.start.y);
+        if (!t) {
+          this.drag = { kind: 'touchpan' };
+          this.panBy(a.dx, a.dy);
+          return;
+        }
+        this.pointer = { x: a.x, y: a.y };
+        this.drag = { kind: 'tool', tool, start: t, end: this.tileAt(a.x, a.y) || t };
+        this.lastHoverKey = '';
+        useGame.setState({ dragging: true });
+        this.updateHoverFromPointer();
+        this.updateToolPreview();
+        return;
+      }
+      case 'dragMove': {
+        if (!this.drag) return;
+        if (this.drag.kind === 'touchpan') return this.panBy(a.dx, a.dy);
+        this.pointer = { x: a.x, y: a.y };
+        this.updateHoverFromPointer();
+        return;
+      }
+      case 'dragEnd': {
+        const d = this.drag;
+        this.drag = null;
+        useGame.setState({ dragging: false });
+        if (d && d.kind === 'tool') this.commitTool(d);
+        return;
+      }
+      case 'dragCancel': {
+        this.drag = null;
+        useGame.setState({ dragging: false, hint: null });
+        this.pushOverlay();
+        return;
+      }
+      case 'pan':
+        return this.panBy(a.dx, a.dy);
+      case 'pinch': {
+        const { w, h } = this.viewport();
+        this.cam = applyPinch(this.cam, w, h, a, this.renderer.bounds);
+        return;
+      }
+      default:
+    }
+  }
+
   cancelDrag() {
     if (this.drag && this.drag.kind === 'pan' && this.canvas) this.canvas.style.cursor = '';
     this.drag = null;
+    this.touch.reset();
+    useGame.setState({ dragging: false });
     useGame.setState({ hint: null });
     this.pushOverlay();
   }
@@ -420,6 +541,7 @@ export class GameController {
   positionHint() {
     const h = useGame.getState().hint;
     if (h && this.pointer && (h.x !== this.pointer.x || h.y !== this.pointer.y)) {
+      // (touch flag is kept as is)
       useGame.setState({ hint: { ...h, x: this.pointer.x, y: this.pointer.y } });
     }
   }
@@ -480,7 +602,7 @@ export class GameController {
         }
       }
     }
-    useGame.setState({ hint: hint && this.pointer ? { ...hint, x: p.x, y: p.y } : null });
+    useGame.setState({ hint: hint && this.pointer ? { ...hint, x: p.x, y: p.y, touch: this.touch.active } : null });
     this.renderer.setOverlay(overlay);
   }
 

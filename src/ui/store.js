@@ -22,6 +22,8 @@ export const initialState = {
   toast: null, // { text, tone, id }
   saveState: { status: 'idle', at: null, error: null }, // 'idle'|'saving'|'saved'|'error'
   glLost: false,
+  dragging: false, // a touch tool drag (road/zone/bulldoze) is in progress
+  sheet: null, // compact layouts: 'city' when the demand/tax sheet is open
 };
 
 /** Pure reducer for notification feed: newest first, de-duplicated by id, capped. */
@@ -39,5 +41,6 @@ export const useGame = create((set) => ({
   addNotification: (n) => set((s) => ({ notifications: pushNotification(s.notifications, n) })),
   dismissNotification: (id) => set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) })),
   showToast: (text, tone = 'info') => set({ toast: { text, tone, id: Date.now() + Math.random() } }),
+  toggleSheet: (name) => set((s) => ({ sheet: s.sheet === name ? null : name })),
   reset: () => set({ ...initialState }),
 }));
