@@ -1,13 +1,13 @@
 // Tool definitions and pure helpers for tool interactions.
 
 export const TOOLS = {
-  inspect: { id: 'inspect', label: 'Inspect', key: 'Q', hint: 'Click a tile to inspect it.' },
-  road: { id: 'road', label: 'Road', key: 'R', hint: 'Drag to lay road. Press R again to switch street / avenue.' },
-  bulldoze: { id: 'bulldoze', label: 'Bulldoze', key: 'B', hint: 'Click or drag a rectangle to demolish.' },
-  zoneR: { id: 'zoneR', label: 'Residential', key: 'Z', zone: 'R', hint: 'Drag to zone. Needs a road within 4 tiles.' },
-  zoneC: { id: 'zoneC', label: 'Commercial', key: 'X', zone: 'C', hint: 'Drag to zone. Needs a road within 4 tiles.' },
-  zoneI: { id: 'zoneI', label: 'Industrial', key: 'C', zone: 'I', hint: 'Drag to zone. Needs a road within 4 tiles.' },
-  dezone: { id: 'dezone', label: 'Dezone', key: 'V', zone: null, hint: 'Drag to remove zoning.' },
+  inspect: { id: 'inspect', label: 'Inspect', short: 'Inspect', key: 'Q', hint: 'Click a tile to inspect it.', touchHint: 'Tap a tile to inspect. Drag to pan, pinch to zoom.' },
+  road: { id: 'road', label: 'Road', short: 'Road', key: 'R', hint: 'Drag to lay road. Press R again to switch street / avenue.', touchHint: 'Drag to lay road. Two fingers pan and zoom.' },
+  bulldoze: { id: 'bulldoze', label: 'Bulldoze', short: 'Bulldoze', key: 'B', hint: 'Click or drag a rectangle to demolish.', touchHint: 'Tap or drag a rectangle to demolish.' },
+  zoneR: { id: 'zoneR', label: 'Residential', short: 'Homes', key: 'Z', zone: 'R', hint: 'Drag to zone. Needs a road within 4 tiles.', touchHint: 'Drag to zone. Needs a road within 4 tiles.' },
+  zoneC: { id: 'zoneC', label: 'Commercial', short: 'Shops', key: 'X', zone: 'C', hint: 'Drag to zone. Needs a road within 4 tiles.', touchHint: 'Drag to zone. Needs a road within 4 tiles.' },
+  zoneI: { id: 'zoneI', label: 'Industrial', short: 'Industry', key: 'C', zone: 'I', hint: 'Drag to zone. Needs a road within 4 tiles.', touchHint: 'Drag to zone. Needs a road within 4 tiles.' },
+  dezone: { id: 'dezone', label: 'Dezone', short: 'Dezone', key: 'V', zone: null, hint: 'Drag to remove zoning.', touchHint: 'Drag to remove zoning.' },
 };
 
 export const TOOL_ORDER = ['inspect', 'road', 'zoneR', 'zoneC', 'zoneI', 'dezone', 'bulldoze'];

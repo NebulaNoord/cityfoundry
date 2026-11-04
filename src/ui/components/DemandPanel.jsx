@@ -1,5 +1,6 @@
 import { useGame } from '../store.js';
-import { ZONE_NAMES, formatInt } from '../format.js';
+import { ZONE_NAMES, formatInt, formatSignedMoney } from '../format.js';
+import { Icon } from './icons.jsx';
 
 const ZONES = ['R', 'C', 'I'];
 
@@ -30,10 +31,35 @@ function Gauge({ zone, value }) {
 
 export function DemandPanel({ ctl }) {
   const stats = useGame((s) => s.stats);
+  const sheet = useGame((s) => s.sheet);
   if (!stats) return null;
   return (
-    <section className="plate panel demand" aria-labelledby="demand-h">
-      <h2 id="demand-h">Demand</h2>
+    <section
+      className={`plate panel demand${sheet === 'city' ? ' sheet-open' : ''}`}
+      aria-labelledby="demand-h"
+      id="city-sheet"
+      data-testid="demand-panel"
+    >
+      <header className="panel-head">
+        <h2 id="demand-h">Demand</h2>
+        {/* compact layouts only */}
+        <button className="btn-icon sheet-close" onClick={() => useGame.setState({ sheet: null })} aria-label="Close city panel" data-testid="sheet-close">
+          <Icon name="close" size={16} />
+        </button>
+      </header>
+      {/* compact layouts only: top-bar figures that don't fit on a phone */}
+      <dl className="sheet-figures">
+        <div>
+          <dt>Daily net</dt>
+          <dd className={stats.daily.net > 0 ? 'pos' : stats.daily.net < 0 ? 'neg' : ''}>{formatSignedMoney(stats.daily.net)}</dd>
+        </div>
+        <div>
+          <dt>Jobs filled</dt>
+          <dd>
+            {formatInt(stats.jobs.total)} / {formatInt(stats.jobCapacity.total)}
+          </dd>
+        </div>
+      </dl>
       <div className="gauges">
         {ZONES.map((z) => (
           <Gauge key={z} zone={z} value={stats.demand[z]} />

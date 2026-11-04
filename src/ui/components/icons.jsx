@@ -61,6 +61,12 @@ const ICONS = {
       <path d="M8 6v12M16 6v12" strokeWidth="2.4" />
     </g>
   ),
+  gauge: (
+    <g {...S}>
+      <path d="M4 18V6M4 18h16" />
+      <path d="M8 18v-5M12 18V9M16 18v-7" strokeWidth="2.4" />
+    </g>
+  ),
   save: (
     <g {...S}>
       <path d="M5 4h11l3 3v13H5z" />

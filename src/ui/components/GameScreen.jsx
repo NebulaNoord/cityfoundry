@@ -17,6 +17,7 @@ export function GameScreen({ sim, onQuit }) {
   const [ctl, setCtl] = useState(null);
   const [error, setError] = useState(null);
   const glLost = useGame((s) => s.glLost);
+  const dragging = useGame((s) => s.dragging);
 
   useEffect(() => {
     const c = new GameController(sim);
@@ -64,6 +65,13 @@ export function GameScreen({ sim, onQuit }) {
             <InspectPanel ctl={ctl} />
           </aside>
           <Notifications ctl={ctl} />
+          {dragging && (
+            // Touch drags only: the Esc equivalent. Tap it with another finger,
+            // or slide the dragging finger onto it and lift.
+            <button className="btn cancel-drag" data-cancel-drag onClick={() => ctl.cancelDrag()} data-testid="cancel-drag">
+              Cancel
+            </button>
+          )}
           <CursorHint />
           <Toast />
         </>

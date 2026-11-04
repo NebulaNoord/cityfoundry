@@ -21,6 +21,8 @@ function SpeedGlyph({ n }) {
 }
 
 export function TopBar({ ctl, onQuit }) {
+  const sheet = useGame((s) => s.sheet);
+  const toggleSheet = useGame((s) => s.toggleSheet);
   const name = useGame((s) => s.cityName);
   const time = useGame((s) => s.time);
   const stats = useGame((s) => s.stats);
@@ -65,7 +67,7 @@ export function TopBar({ ctl, onQuit }) {
           <dt>Funds</dt>
           <dd data-testid="funds">{stats ? formatMoney(funds) : '—'}</dd>
         </div>
-        <div className="fig">
+        <div className="fig fig-net">
           <dt>Daily net</dt>
           <dd data-testid="daily-net" className={net > 0 ? 'pos' : net < 0 ? 'neg' : ''}>
             {stats ? formatSignedMoney(net) : '—'}
@@ -82,6 +84,18 @@ export function TopBar({ ctl, onQuit }) {
           </dd>
         </div>
       </dl>
+
+      {/* Compact layouts only (hidden by CSS on desktop): opens the demand / tax sheet. */}
+      <button
+        className={`btn sheet-toggle${sheet === 'city' ? ' on' : ''}`}
+        onClick={() => toggleSheet('city')}
+        aria-expanded={sheet === 'city'}
+        aria-controls="city-sheet"
+        data-testid="sheet-toggle"
+      >
+        <Icon name="gauge" size={16} />
+        <span>City</span>
+      </button>
 
       <button
         className={`btn btn-save${saveState.status === 'error' ? ' bad' : ''}`}

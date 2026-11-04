@@ -27,6 +27,9 @@ export function Toolbar({ ctl }) {
                 >
                   <Icon name={id} size={22} />
                   <span className="tool-label">{t.label}</span>
+                  <span className="tool-short" aria-hidden="true">
+                    {t.short}
+                  </span>
                   <kbd>{t.key}</kbd>
                 </button>
               );
@@ -52,7 +55,8 @@ export function Toolbar({ ctl }) {
         </div>
       )}
       <p className="tool-hint" aria-live="polite">
-        {TOOLS[tool] ? TOOLS[tool].hint : ''}
+        <span className="hint-pointer">{TOOLS[tool] ? TOOLS[tool].hint : ''}</span>
+        <span className="hint-touch">{TOOLS[tool] ? TOOLS[tool].touchHint : ''}</span>
       </p>
     </nav>
   );

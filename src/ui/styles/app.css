@@ -1085,3 +1085,563 @@ kbd {
     transition: none !important;
   }
 }
+
+/* ======================================================================
+   Touch and compact (phone / small tablet) layouts.
+   Desktop (fine pointer, ≥ 901 × 521) never matches anything below except
+   the always-hidden compact-only elements in the first block.
+   ====================================================================== */
+
+/* compact-only controls: hidden unless a compact query turns them on */
+.sheet-toggle,
+.sheet-close,
+.sheet-figures,
+.tool-short,
+.hint-touch {
+  display: none;
+}
+
+.demand > .panel-head {
+  margin-bottom: var(--sp-2);
+}
+
+/* the map owns every touch: no page scroll, pinch-zoom or pull-to-refresh */
+.game,
+.map-host canvas {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  touch-action: manipulation; /* no double-tap zoom on menus */
+}
+
+.cancel-drag {
+  position: absolute;
+  left: 50%;
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  min-width: 132px;
+  min-height: 48px;
+  border-color: var(--bad);
+  background: rgba(29, 35, 40, 0.96);
+  color: #ffd6cf;
+  font-size: var(--fs-lg);
+  touch-action: none;
+  z-index: 6;
+}
+
+.cursor-hint.touch {
+  z-index: 7;
+}
+
+/* devices whose main pointer is a finger: no hotkey hints, touch wording */
+@media (hover: none), (pointer: coarse) {
+  kbd {
+    display: none;
+  }
+
+  .hint-pointer {
+    display: none;
+  }
+
+  .hint-touch {
+    display: inline;
+  }
+
+  .field input {
+    font-size: 16px; /* stops iOS zooming into focused inputs */
+  }
+
+  .btn,
+  .btn-icon {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ------------------------------------------------------------ compact */
+@media (max-width: 900px), (max-height: 520px) {
+  .game {
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --edge: 6px;
+    --toolbar-h: 112px;
+    height: 100%;
+  }
+
+  /* top bar: two rows (portrait) */
+  .topbar {
+    top: calc(var(--edge) + var(--safe-t));
+    left: calc(var(--edge) + var(--safe-l));
+    right: calc(var(--edge) + var(--safe-r));
+    height: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'city city figs figs'
+      'speed . sheet save';
+    gap: 6px var(--sp-2);
+    padding: 6px var(--sp-2);
+  }
+
+  .tb-city {
+    grid-area: city;
+  }
+
+  .tb-name {
+    font-size: var(--fs-lg);
+    max-width: 100%;
+  }
+
+  .tb-city > div {
+    min-width: 0;
+  }
+
+  .tb-date {
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+
+  .tb-speed {
+    grid-area: speed;
+  }
+
+  .speed-btn {
+    height: 40px;
+    min-width: 44px;
+  }
+
+  .tb-figures {
+    grid-area: figs;
+    margin: 0;
+    gap: var(--sp-3);
+    justify-self: end;
+  }
+
+  .fig dd {
+    font-size: var(--fs-lg);
+  }
+
+  .fig-net,
+  .fig-sub {
+    display: none;
+  }
+
+  .sheet-toggle {
+    grid-area: sheet;
+    display: inline-flex;
+    padding: 0 var(--sp-3);
+    min-height: 40px;
+  }
+
+  .sheet-toggle.on {
+    border-color: var(--sodium);
+    color: var(--sodium-strong);
+  }
+
+  .btn-save {
+    grid-area: save;
+    padding: 0 var(--sp-3);
+    min-height: 40px;
+  }
+
+  /* toolbar: full-width dock at the bottom, scrolls sideways if needed */
+  .toolbar {
+    left: calc(var(--edge) + var(--safe-l));
+    right: calc(var(--edge) + var(--safe-r));
+    bottom: calc(var(--edge) + var(--safe-b));
+    transform: none;
+    padding: 4px 4px 2px;
+    align-items: stretch;
+  }
+
+  .tools {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    gap: 4px;
+  }
+
+  .tools::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tool-group {
+    gap: 2px;
+    padding-right: 4px;
+    flex: none;
+  }
+
+  .tool {
+    width: 46px;
+    height: 54px;
+    flex: none;
+    grid-template-rows: 26px 14px;
+  }
+
+  .tool-group {
+    border-right-color: var(--steel-800);
+  }
+
+  .tool-label {
+    display: none;
+  }
+
+  .tool-short {
+    display: block;
+    font-family: var(--font-cond);
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+  }
+
+  .tool.on::after {
+    bottom: -3px;
+  }
+
+  .subtools {
+    order: -1; /* above the tool row: tool buttons stay put when chips appear */
+    justify-content: center;
+    padding: 0 0 4px;
+  }
+
+  /* make room above the taller toolbar when the road chips are showing */
+  .game:has(.subtools) .side {
+    bottom: calc(var(--edge) + var(--safe-b) + var(--toolbar-h) + 52px);
+  }
+
+  .chip {
+    height: 40px;
+    line-height: 38px;
+    border-radius: 20px;
+  }
+
+  .tool-hint {
+    text-align: center;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* side panels become a bottom sheet stack above the toolbar */
+  .side {
+    top: auto;
+    left: calc(var(--edge) + var(--safe-l));
+    right: calc(var(--edge) + var(--safe-r));
+    bottom: calc(var(--edge) + var(--safe-b) + var(--toolbar-h) + 6px);
+    width: auto;
+    max-height: 52%;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  .demand {
+    display: none;
+  }
+
+  .demand.sheet-open {
+    display: block;
+    animation: sheet-in 160ms ease-out;
+  }
+
+  .sheet-close {
+    display: inline-grid;
+    width: 44px;
+    height: 44px;
+    margin: -8px -8px 0 0;
+  }
+
+  .sheet-figures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-2);
+  }
+
+  .sheet-figures dt {
+    font-size: var(--fs-xs);
+    color: var(--concrete-500);
+  }
+
+  .sheet-figures dd {
+    margin: 0;
+    font-family: var(--font-cond);
+    font-weight: 600;
+    font-size: var(--fs-lg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mini-stats {
+    display: grid;
+  }
+
+  .tax {
+    min-height: 40px;
+    grid-template-columns: 82px minmax(0, 1fr) 34px;
+  }
+
+  .tax input[type='range'] {
+    height: 40px;
+  }
+
+  .tax input[type='range']::-webkit-slider-thumb {
+    width: 22px;
+    height: 28px;
+    margin-top: -12px;
+  }
+
+  .tax input[type='range']::-moz-range-thumb {
+    width: 22px;
+    height: 28px;
+  }
+
+  .inspect .btn-icon {
+    width: 44px;
+    height: 44px;
+    margin: -8px -8px 0 0;
+  }
+
+  /* notices: newest one only, tucked under the top bar */
+  .notes {
+    top: calc(var(--edge) + var(--safe-t) + 104px);
+    bottom: auto;
+    left: calc(var(--edge) + var(--safe-l));
+    width: min(300px, calc(100% - 2 * var(--edge) - var(--safe-l) - var(--safe-r)));
+    flex-direction: column;
+  }
+
+  .notes .note:nth-child(n + 2) {
+    display: none;
+  }
+
+  .notes-toggle {
+    min-height: 32px;
+  }
+
+  .note {
+    font-size: var(--fs-xs);
+  }
+
+  .note .btn-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .toast {
+    top: calc(var(--edge) + var(--safe-t) + 108px);
+    max-width: calc(100% - 24px);
+    text-align: center;
+  }
+
+  .cancel-drag {
+    top: calc(var(--edge) + var(--safe-t) + 108px);
+  }
+
+  /* menu */
+  .menu {
+    padding: calc(var(--sp-5) + env(safe-area-inset-top, 0px)) calc(var(--sp-4) + env(safe-area-inset-right, 0px))
+      calc(var(--sp-5) + env(safe-area-inset-bottom, 0px)) calc(var(--sp-4) + env(safe-area-inset-left, 0px));
+    grid-template-columns: minmax(0, 1fr);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .menu-left {
+    align-self: start;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .wordmark p {
+    font-size: var(--fs-md);
+  }
+
+  .save-load {
+    min-height: 52px;
+  }
+
+  .save-list li .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* landscape phones: one-row top bar, side sheet on the right, slim dock */
+@media (max-height: 520px) {
+  .menu {
+    padding-top: calc(var(--sp-3) + env(safe-area-inset-top, 0px));
+  }
+
+  .menu-left {
+    max-width: 760px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    gap: var(--sp-3) var(--sp-4);
+    align-items: start;
+  }
+
+  .menu-left > .wordmark {
+    grid-row: span 3;
+  }
+
+  .wordmark h1 {
+    font-size: 2.6rem;
+  }
+
+  .menu-left > :not(.wordmark) {
+    grid-column: 2;
+  }
+
+  .new-city,
+  .saves {
+    padding: var(--sp-3);
+    gap: var(--sp-2);
+  }
+
+  .new-city h2,
+  .saves h2 {
+    font-size: var(--fs-lg);
+  }
+
+  .game {
+    --toolbar-h: 64px;
+  }
+
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    grid-template-areas: 'city speed figs sheet save';
+    align-items: center;
+    padding: 4px var(--sp-2);
+  }
+
+  .tb-figures {
+    justify-self: stretch;
+  }
+
+  .speed-btn {
+    height: 36px;
+  }
+
+  .tool {
+    height: 48px;
+    width: 52px;
+    grid-template-rows: 24px 12px;
+  }
+
+  .tool-hint {
+    display: none;
+  }
+
+  .toolbar {
+    left: calc(var(--edge) + var(--safe-l));
+    right: auto;
+    transform: none;
+    max-width: calc(100% - 2 * var(--edge) - var(--safe-l) - var(--safe-r));
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .subtools {
+    order: 0;
+    padding: 0 0 0 var(--sp-2);
+    border-left: 1px solid var(--steel-700);
+  }
+
+  .game:has(.subtools) .side {
+    bottom: calc(var(--edge) + var(--safe-b));
+  }
+
+  .chip {
+    height: 36px;
+    line-height: 34px;
+  }
+
+  .chip-meta {
+    display: none;
+  }
+
+  .side {
+    top: calc(var(--edge) + var(--safe-t) + 60px);
+    bottom: calc(var(--edge) + var(--safe-b));
+    left: auto;
+    width: 300px;
+    max-height: none;
+    overflow: hidden;
+    pointer-events: none; /* the empty column must not block the map */
+  }
+
+  .side > .panel {
+    flex: 0 1 auto;
+    min-height: 0;
+    pointer-events: auto;
+  }
+
+  .demand h3 {
+    margin: var(--sp-2) 0 var(--sp-1);
+    padding-top: var(--sp-1);
+  }
+
+  .demand.sheet-open {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .demand .panel-head h2 {
+    margin: 0;
+  }
+
+  .sheet-figures {
+    margin-bottom: var(--sp-1);
+  }
+
+  .gauges {
+    gap: 3px;
+  }
+
+  .tax {
+    min-height: 34px;
+  }
+
+  .tax input[type='range'] {
+    height: 34px;
+  }
+
+  .notes {
+    top: calc(var(--edge) + var(--safe-t) + 60px);
+  }
+
+  .toast {
+    top: calc(var(--edge) + var(--safe-t) + 60px);
+  }
+
+  .cancel-drag {
+    top: calc(var(--edge) + var(--safe-t) + 62px);
+    min-height: 44px;
+  }
+
+  .mini-stats {
+    display: none;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
