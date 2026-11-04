@@ -234,8 +234,12 @@ class Simulation {
     let roadsRemoved = false;
     let buildingsRemoved = false;
     const changed = [];
-    for (const idx of targets) {
-      const bid = s.buildingAt[idx];
+    // Decide each tile's action before mutating, so removing a multi-tile
+    // building doesn't make its other footprint tiles fall through to dezoning.
+    const plannedBuilding = targets.map((idx) => s.buildingAt[idx]);
+    for (let k = 0; k < targets.length; k++) {
+      const idx = targets[k];
+      const bid = plannedBuilding[k];
       if (bid !== 0) {
         const b = s.buildings.get(bid);
         if (!b) continue; // already removed via another footprint tile
@@ -332,7 +336,7 @@ class Simulation {
       jobs: { C: a.jobs.C, I: a.jobs.I, total: a.jobs.C + a.jobs.I },
       jobCapacity: { C: a.jobCap.C, I: a.jobCap.I, total: a.jobCap.C + a.jobCap.I },
       workers: a.workers,
-      unemployed: a.laborForce - a.workers,
+      unemployed: Math.max(0, a.laborForce - a.workers),
       funds: s.fundsCents / 100,
       daily: { income, expenses, net: (s.lastDaily.incomeCents - s.lastDaily.expensesCents) / 100 },
       taxRates: { ...s.taxRates },
