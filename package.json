@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:sim": "vitest run tests/sim",
+    "test:sim:node": "node scripts/run-sim-tests.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
